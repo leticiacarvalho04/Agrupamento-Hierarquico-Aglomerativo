@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>PLN - Agrupamento Hierárquico</title>
+  <link rel="stylesheet" href="../static/css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>PLN — Agrupamento Hierárquico (Ward)</h1>
+    <p>Cole os textos abaixo (cada linha = 1 documento) e clique em <strong>Executar</strong>.</p>
+
+    <form action="{{ url_for('run_pipeline') }}" method="post">
+      <div class="area">
+        <h3>Textos - Literatura</h3>
+        <textarea name="literatura_text" rows="8">{{ example_literatura }}</textarea>
+      </div>
+
+      <div class="area">
+        <h3>Textos - Reviews</h3>
+        <textarea name="reviews_text" rows="8">{{ example_reviews }}</textarea>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn">Executar análise</button>
+      </div>
+    </form>
+  </div>
+</body>
+</html>
