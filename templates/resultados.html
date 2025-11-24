@@ -43,12 +43,45 @@
       <h2>Insights automáticos</h2>
       <p>{{ insights.note }}</p>
 
-      <h4>Top termos por documento (TF-IDF)</h4>
-      <ol>
-        {% for terms in insights.top_terms_per_doc %}
-          <li>{{ terms[0] | capitalize }}{% if terms|length > 1 %}, {{ terms[1:] | join(', ') }}{% endif %}</li>
-        {% endfor %}
-      </ol>
+      <!-- ============================== -->
+      <!--   INSIGHTS DE TF-IDF (SE EXISTIR) -->
+      <!-- ============================== -->
+      {% if insights.top_terms_per_doc %}
+        <h3>Top termos por documento (TF-IDF)</h3>
+        <ol>
+          {% for terms in insights.top_terms_per_doc %}
+            <li>
+              {{ terms[0] | capitalize }}
+              {% if terms|length > 1 %}, {{ terms[1:] | join(', ') }}{% endif %}
+            </li>
+          {% endfor %}
+        </ol>
+      {% endif %}
+
+      <!-- ============================== -->
+      <!--   INSIGHTS DE EMBEDDINGS (W2V / TRANSFORMER) -->
+      <!-- ============================== -->
+      {% if insights.mais_parecidos %}
+        <h3>Textos mais parecidos</h3>
+        <ul>
+          {% for item in insights.mais_parecidos %}
+            <li>
+              Texto {{ item[0] }} ↔ Texto {{ item[1] }}
+              (distância: {{ '%.4f'|format(item[2]) }})
+            </li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+
+      {% if insights.par_mais_distante %}
+        <h3>Par de textos mais distante</h3>
+        <p>
+          Texto {{ insights.par_mais_distante.textos[0] }}
+          ↔ Texto {{ insights.par_mais_distante.textos[1] }}
+          (distância: {{ '%.4f'|format(insights.par_mais_distante.distancia) }})
+        </p>
+      {% endif %}
+
     </section>
 
     <div class="actions">
