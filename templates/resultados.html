@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>Resultados — PLN</title>
-  <link rel="stylesheet" href="../static/css/styles.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
   <div class="container">
@@ -32,8 +32,8 @@
       <div class="grid">
         {% for key, path in outputs.items() %}
           <div class="card">
-            <h4>{{ key.replace('_',' ') }}</h4>
-            <img src="../static/{{ path }}" alt="{{ key }}">
+            <h4>{{ key.replace('_',' ') | capitalize }}</h4>
+            <img src="{{ url_for('static', filename=path) }}" alt="{{ key }}">
           </div>
         {% endfor %}
       </div>
@@ -46,13 +46,13 @@
       <h4>Top termos por documento (TF-IDF)</h4>
       <ol>
         {% for terms in insights.top_terms_per_doc %}
-          <li>{{ terms | join(', ') }}</li>
+          <li>{{ terms[0] | capitalize }}{% if terms|length > 1 %}, {{ terms[1:] | join(', ') }}{% endif %}</li>
         {% endfor %}
       </ol>
     </section>
 
     <div class="actions">
-      <a href="./index.html" class="btn">Voltar / Nova execução</a>
+      <a href="{{ url_for('index') }}" class="btn">Voltar / Nova execução</a>
     </div>
   </div>
 </body>

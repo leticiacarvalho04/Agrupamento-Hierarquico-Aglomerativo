@@ -1,0 +1,36 @@
+========================================
+EXEMPLO DE TESTE - AGRUPAMENTO HIERÁRQUICO
+========================================
+
+Copie e cole os textos abaixo na interface web do projeto.
+
+--- TEXTOS DE LITERATURA ---
+Dom Casmurro é um romance clássico da literatura brasileira escrito por Machado de Assis.
+Capitu tinha olhos de ressaca, uma expressão que ficou famosa na literatura nacional.
+O livro narra a história de Bentinho e sua paixão por Capitu desde a infância.
+A obra explora temas como ciúme, traição e a subjetividade da narrativa.
+Machado de Assis é considerado um dos maiores escritores brasileiros de todos os tempos.
+A narrativa em primeira pessoa cria uma atmosfera íntima e questionável.
+O romance foi publicado em 1899 e continua sendo estudado até os dias de hoje.
+A ambiguidade da obra permite múltiplas interpretações sobre a traição de Capitu.
+
+--- REVIEWS DE PRODUTOS ---
+Produto excelente, chegou antes do prazo e superou minhas expectativas!
+A qualidade é muito boa e o preço está justo pelo que oferece.
+Chegou atrasado e a embalagem estava danificada, mas o produto estava intacto.
+Não recomendo, a qualidade deixou a desejar e não vale o preço pago.
+Ótimo custo-benefício, recomendo para quem procura qualidade e preço justo.
+O atendimento foi péssimo e o produto não correspondeu à descrição do site.
+Entrega rápida e produto de excelente qualidade, superou todas as expectativas.
+Produto mediano, funciona mas não é nada especial pelo preço que cobram.
+
+========================================
+INSTRUÇÕES:
+========================================
+1. Execute o projeto Flask: python app.py
+2. Acesse http://localhost:5000 no navegador
+3. Cole os textos de literatura na primeira caixa de texto
+4. Cole as reviews na segunda caixa de texto
+5. Clique em "Executar análise"
+6. Veja os resultados com dendrograma, heatmap e insights
+

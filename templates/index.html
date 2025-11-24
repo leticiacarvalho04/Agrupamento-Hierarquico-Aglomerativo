@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <title>PLN - Agrupamento Hierárquico</title>
-  <link rel="stylesheet" href="../static/css/styles.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
   <div class="container">
@@ -13,12 +13,12 @@
     <form action="{{ url_for('run_pipeline') }}" method="post">
       <div class="area">
         <h3>Textos - Literatura</h3>
-        <textarea name="literatura_text" rows="8">{{ example_literatura }}</textarea>
+        <textarea name="literatura_text" rows="8" placeholder="Digite aqui um texto"></textarea>
       </div>
 
       <div class="area">
         <h3>Textos - Reviews</h3>
-        <textarea name="reviews_text" rows="8">{{ example_reviews }}</textarea>
+        <textarea name="reviews_text" rows="8" placeholder="Digite aqui uma review"></textarea>
       </div>
 
       <div class="actions">

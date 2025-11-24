@@ -1,7 +1,8 @@
 from flask import Flask, render_template, request, url_for
 import os
+import matplotlib
+matplotlib.use('Agg')  # Backend não-interativo para aplicações web
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics.pairwise import cosine_distances
@@ -21,13 +22,14 @@ def gerar_graficos(tfidf_matrix):
     dist = cosine_distances(tfidf_matrix)
 
     # Heatmap
+    # Heatmap (using matplotlib to avoid seaborn dependency)
     plt.figure(figsize=(6, 5))
-    sns.heatmap(dist, cmap="viridis")
+    plt.imshow(dist, cmap="viridis", aspect="auto")
+    plt.colorbar()
     heatmap_path = f"{OUTPUT_DIR}/heatmap.png"
-    plt.savefig(heatmap_path)
+    plt.savefig(heatmap_path, bbox_inches="tight")
     plt.close()
     outputs["heatmap"] = "outputs/heatmap.png"
-
     # Dendrograma
     from scipy.cluster.hierarchy import dendrogram, linkage
     Z = linkage(dist, "ward")
@@ -69,6 +71,11 @@ def run_pipeline():
     literatura_raw = request.form["literatura_text"].split("\n")
     reviews_raw = request.form["reviews_text"].split("\n")
 
+    # Textos originais para exibição (apenas strip)
+    literatura_display = [t.strip() for t in literatura_raw if t.strip()]
+    reviews_display = [t.strip() for t in reviews_raw if t.strip()]
+
+    # Textos limpos para processamento (lower + strip)
     literatura_clean = [limpar_texto(t) for t in literatura_raw if t.strip()]
     reviews_clean = [limpar_texto(t) for t in reviews_raw if t.strip()]
 
@@ -83,8 +90,8 @@ def run_pipeline():
 
     return render_template(
         "resultados.html",
-        literatura_clean=literatura_clean,
-        reviews_clean=reviews_clean,
+        literatura_clean=literatura_display,
+        reviews_clean=reviews_display,
         outputs=outputs,
         insights=insights
     )
