@@ -21,6 +21,13 @@
         <textarea name="reviews_text" rows="8" placeholder="Digite aqui uma review"></textarea>
       </div>
 
+      <label>Método:</label>
+      <select name="metodo" class="input">
+          <option value="tfidf">TF-IDF</option>
+          <option value="word2vec">Word2Vec</option>
+          <option value="transformer">Transformers</option>
+      </select>
+
       <div class="actions">
         <button type="submit" class="btn">Executar análise</button>
       </div>

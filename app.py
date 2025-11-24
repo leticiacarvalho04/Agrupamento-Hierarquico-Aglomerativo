@@ -1,11 +1,15 @@
-from flask import Flask, render_template, request, url_for
+from flask import Flask, render_template, request
 import os
 import matplotlib
-matplotlib.use('Agg')  # Backend não-interativo para aplicações web
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from sklearn.metrics.pairwise import cosine_distances
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import AgglomerativeClustering
-from sklearn.metrics.pairwise import cosine_distances
+from scipy.cluster.hierarchy import dendrogram, linkage
+import numpy as np
+from gensim.models import Word2Vec
+from sentence_transformers import SentenceTransformer
 
 app = Flask(__name__)
 
@@ -13,85 +17,122 @@ OUTPUT_DIR = "static/outputs"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-def limpar_texto(txt):
-    return txt.lower().strip()
+# ----------------------
+# Pré-processamento
+# ----------------------
+def limpar_texto(t):
+    return t.lower().strip()
 
 
-def gerar_graficos(tfidf_matrix):
-    outputs = {}
-    dist = cosine_distances(tfidf_matrix)
+# ----------------------
+# TF-IDF
+# ----------------------
+def gerar_tfidf(docs):
+    vectorizer = TfidfVectorizer()
+    matrix = vectorizer.fit_transform(docs).toarray()
+    features = vectorizer.get_feature_names_out()
+    return matrix, features
+
+
+# ----------------------
+# Word2Vec
+# ----------------------
+def gerar_word2vec(docs):
+    tokenizado = [t.split() for t in docs]
+
+    model = Word2Vec(sentences=tokenizado, vector_size=100, window=5, min_count=1, workers=2)
+    vectors = []
+
+    for palavras in tokenizado:
+        if palavras:
+            vet = np.mean([model.wv[p] for p in palavras], axis=0)
+            vectors.append(vet)
+        else:
+            vectors.append(np.zeros(100))
+    return np.array(vectors)
+
+
+# ----------------------
+# Transformers (sem PyTorch)
+# ----------------------
+def gerar_transformer(docs):
+    model = SentenceTransformer("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
+    embeddings = model.encode(docs)
+    return embeddings
+
+
+# ----------------------
+# Geração dos gráficos
+# ----------------------
+def gerar_graficos(matrix, nome):
+    dist = cosine_distances(matrix)
 
     # Heatmap
-    # Heatmap (using matplotlib to avoid seaborn dependency)
     plt.figure(figsize=(6, 5))
     plt.imshow(dist, cmap="viridis", aspect="auto")
     plt.colorbar()
-    heatmap_path = f"{OUTPUT_DIR}/heatmap.png"
+    heatmap_path = f"{OUTPUT_DIR}/{nome}_heatmap.png"
     plt.savefig(heatmap_path, bbox_inches="tight")
     plt.close()
-    outputs["heatmap"] = "outputs/heatmap.png"
+
     # Dendrograma
-    from scipy.cluster.hierarchy import dendrogram, linkage
     Z = linkage(dist, "ward")
     plt.figure(figsize=(6, 5))
     dendrogram(Z)
-    dendro_path = f"{OUTPUT_DIR}/dendrograma.png"
+    dendro_path = f"{OUTPUT_DIR}/{nome}_dendrograma.png"
     plt.savefig(dendro_path)
     plt.close()
-    outputs["dendrograma"] = "outputs/dendrograma.png"
 
-    return outputs
-
-
-def gerar_insights(tfidf, feature_names):
-    top_terms = []
-    for row in tfidf:
-        idx = row.argsort()[-5:][::-1]
-        termos = [feature_names[i] for i in idx]
-        top_terms.append(termos)
-
-    insights = {
-        "note": "Análise concluída automaticamente.",
-        "top_terms_per_doc": top_terms
+    return {
+        "heatmap": f"outputs/{nome}_heatmap.png",
+        "dendrograma": f"outputs/{nome}_dendrograma.png"
     }
-    return insights
+
+def gerar_insights(matrix):
+    return {
+        "note": "Análise concluída automaticamente."
+    }
 
 
+# ----------------------
+# Rota principal
+# ----------------------
 @app.route("/")
 def index():
-    return render_template(
-        "index.html",
-        example_literatura="Dom Casmurro é um romance clássico.\nCapitu tinha olhos de ressaca.",
-        example_reviews="Produto ótimo!\nChegou atrasado."
-    )
+    return render_template("index.html")
 
 
+# ----------------------
+# Execução da pipeline
+# ----------------------
 @app.route("/run", methods=["POST"])
 def run_pipeline():
+    tipo = request.form["metodo"]
     literatura_raw = request.form["literatura_text"].split("\n")
     reviews_raw = request.form["reviews_text"].split("\n")
 
-    # Textos originais para exibição (apenas strip)
-    literatura_display = [t.strip() for t in literatura_raw if t.strip()]
-    reviews_display = [t.strip() for t in reviews_raw if t.strip()]
+    textos = [limpar_texto(t) for t in literatura_raw + reviews_raw if t.strip()]
 
-    # Textos limpos para processamento (lower + strip)
-    literatura_clean = [limpar_texto(t) for t in literatura_raw if t.strip()]
-    reviews_clean = [limpar_texto(t) for t in reviews_raw if t.strip()]
+    # Seleção da técnica
+    if tipo == "tfidf":
+        matrix, features = gerar_tfidf(textos)
+    elif tipo == "word2vec":
+        matrix = gerar_word2vec(textos)
+        features = []
+    elif tipo == "transformer":
+        matrix = gerar_transformer(textos)
+        features = []
+    else:
+        return "Método inválido", 400
 
-    documentos = literatura_clean + reviews_clean
-
-    vectorizer = TfidfVectorizer()
-    tfidf = vectorizer.fit_transform(documentos).toarray()
-    feature_names = vectorizer.get_feature_names_out()
-
-    outputs = gerar_graficos(tfidf)
-    insights = gerar_insights(tfidf, feature_names)
+    # Gera gráficos
+    outputs = gerar_graficos(matrix, tipo)
+    insights = gerar_insights(matrix)
 
     return render_template(
         "resultados.html",
-        literatura_clean=literatura_display,
-        reviews_clean=reviews_display,
+        textos=textos,
+        metodo=tipo.upper(),
         outputs=outputs,
         insights=insights
     )
