@@ -83,6 +83,20 @@
       {% endif %}
 
     </section>
+    <section>
+      <h2>Clusterização dos documentos</h2>
+
+      {% for cluster, docs in clusters.grupos.items() %}
+        <div class="card">
+          <h3>Cluster {{ cluster }} — Tema detectado: {{ clusters.temas[cluster] }}</h3>
+          <ul>
+            {% for d in docs %}
+              <li>{{ d }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </section>
 
     <div class="actions">
       <a href="{{ url_for('index') }}" class="btn">Voltar / Nova execução</a>

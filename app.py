@@ -6,13 +6,12 @@ import matplotlib.pyplot as plt
 
 from sklearn.metrics.pairwise import cosine_distances
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import AgglomerativeClustering
-from scipy.cluster.hierarchy import dendrogram, linkage
+from scipy.cluster.hierarchy import linkage, dendrogram, fcluster
 
 import numpy as np
+import pandas as pd
 from gensim.models import Word2Vec
 from sentence_transformers import SentenceTransformer
-
 
 app = Flask(__name__)
 
@@ -31,7 +30,7 @@ def limpar_texto(t):
 # TF-IDF
 # -----------------------------------------
 def gerar_tfidf(docs):
-    vectorizer = TfidfVectorizer()
+    vectorizer = TfidfVectorizer(norm='l2', use_idf=True)
     matrix = vectorizer.fit_transform(docs).toarray()
     features = vectorizer.get_feature_names_out()
     return matrix, features
@@ -100,7 +99,7 @@ def gerar_graficos(matrix, nome):
 
 
 # -----------------------------------------
-# Insights (só TF-IDF)
+# Insights TF-IDF
 # -----------------------------------------
 def gerar_insights(matrix, feature_names=None):
     if feature_names is None:
@@ -117,44 +116,73 @@ def gerar_insights(matrix, feature_names=None):
         "top_terms_per_doc": top_terms
     }
 
-def gerar_insights_tfidf(matrix, feature_names):
-    top_terms = []
-    for row in matrix:
-        idx = row.argsort()[-5:][::-1]
-        termos = [feature_names[i] for i in idx]
-        top_terms.append(termos)
-
-    return {
-        "tipo": "tfidf",
-        "note": "Análise TF-IDF concluída.",
-        "top_terms_per_doc": top_terms
-    }
-
 
 # -----------------------------------------
-# Insights para Word2Vec / Transformers
+# Insights para embeddings
 # -----------------------------------------
 def gerar_insights_embedding(matrix):
     dist = cosine_distances(matrix)
 
-    # textos mais parecidos
     similar = []
     for i in range(len(dist)):
-        idx = dist[i].argsort()[1]  # o mais próximo, ignorando ele mesmo
+        idx = dist[i].argsort()[1]
         similar.append((i, idx, dist[i][idx]))
 
-    # par mais distante
     max_pair = np.unravel_index(dist.argmax(), dist.shape)
     max_dist = dist[max_pair]
 
     return {
-        "tipo": "embedding",
         "note": "Análise baseada em similaridade entre embeddings.",
         "mais_parecidos": similar,
         "par_mais_distante": {
             "textos": max_pair,
             "distancia": float(max_dist)
         }
+    }
+
+
+# -----------------------------------------
+# Inferir tema simples
+# -----------------------------------------
+def inferir_tema(lista_textos):
+    texto = " ".join(lista_textos)
+
+    temas = {
+        "Clima / Tempo": ["chuva", "chuvoso", "sol", "ensolarado", "tempo"],
+        "Comida / Alimentação": ["comida", "saborosa", "restaurante", "gostei"],
+        "Sentimentos": ["bom", "ótimo", "ruim", "horrível"],
+    }
+
+    for tema, palavras in temas.items():
+        if any(p in texto for p in palavras):
+            return tema
+
+    return "Outro assunto"
+
+
+# -----------------------------------------
+# Clusterização hierárquica
+# -----------------------------------------
+def gerar_clusters(matrix, textos, n_clusters=2):
+    dist = cosine_distances(matrix)
+    Z = linkage(dist, method="ward")
+
+    labels = fcluster(Z, t=n_clusters, criterion="maxclust")
+
+    df = pd.DataFrame({"texto": textos, "cluster": labels})
+
+    grupos = {}
+    temas = {}
+
+    for c in sorted(df["cluster"].unique()):
+        lista = list(df[df["cluster"] == c]["texto"])
+        grupos[c] = lista
+        temas[c] = inferir_tema(lista)
+
+    return {
+        "labels": labels.tolist(),
+        "grupos": grupos,
+        "temas": temas
     }
 
 
@@ -171,47 +199,43 @@ def index():
 
 
 # -----------------------------------------
-# Execução da pipeline
+# Pipeline
 # -----------------------------------------
 @app.route("/run", methods=["POST"])
 def run_pipeline():
     tipo = request.form["metodo"]
 
-    # Entrada bruta
     literatura_raw = request.form["literatura_text"].split("\n")
     reviews_raw = request.form["reviews_text"].split("\n")
 
-    # Para exibição
     literatura_display = [t.strip() for t in literatura_raw if t.strip()]
     reviews_display = [t.strip() for t in reviews_raw if t.strip()]
 
-    # Para processamento
-    literatura_clean = [limpar_texto(t) for t in literatura_raw if t.strip()]
-    reviews_clean = [limpar_texto(t) for t in reviews_raw if t.strip()]
+    literatura_clean = [limpar_texto(t) for t in literatura_display]
+    reviews_clean = [limpar_texto(t) for t in reviews_display]
 
-    # Textos unificados
     textos = literatura_clean + reviews_clean
 
-    # ---------- Seletor de método ----------
+    # Seleciona método
     if tipo == "tfidf":
         matrix, features = gerar_tfidf(textos)
         insights = gerar_insights(matrix, features)
 
     elif tipo == "word2vec":
         matrix = gerar_word2vec(textos)
-        insights = {"note": "Insights disponíveis apenas para TF-IDF."}
-        features = []
+        insights = gerar_insights_embedding(matrix)
 
     elif tipo == "transformer":
         matrix = gerar_transformer(textos)
-        insights = {"note": "Insights disponíveis apenas para TF-IDF."}
-        features = []
+        insights = gerar_insights_embedding(matrix)
 
     else:
         return "Método inválido", 400
 
-    # Gera gráficos
     outputs = gerar_graficos(matrix, tipo)
+
+    # Clusterização
+    clusters = gerar_clusters(matrix, textos, n_clusters=2)
 
     return render_template(
         "resultados.html",
@@ -220,7 +244,8 @@ def run_pipeline():
         textos=textos,
         metodo=tipo.upper(),
         outputs=outputs,
-        insights=insights
+        insights=insights,
+        clusters=clusters
     )
 
 
