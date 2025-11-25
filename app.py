@@ -118,25 +118,34 @@ def gerar_insights(matrix, feature_names=None):
 
 
 # -----------------------------------------
-# Insights para embeddings
+# Insights para embeddings (🔥 COM TEXTO REAL)
 # -----------------------------------------
-def gerar_insights_embedding(matrix):
+def gerar_insights_embedding(matrix, textos):
     dist = cosine_distances(matrix)
 
     similar = []
     for i in range(len(dist)):
         idx = dist[i].argsort()[1]
-        similar.append((i, idx, dist[i][idx]))
+
+        similar.append({
+            "i": i,
+            "j": idx,
+            "dist": float(dist[i][idx]),
+            "texto_i": textos[i],
+            "texto_j": textos[idx],
+        })
 
     max_pair = np.unravel_index(dist.argmax(), dist.shape)
-    max_dist = dist[max_pair]
 
     return {
         "note": "Análise baseada em similaridade entre embeddings.",
         "mais_parecidos": similar,
         "par_mais_distante": {
-            "textos": max_pair,
-            "distancia": float(max_dist)
+            "i": int(max_pair[0]),
+            "j": int(max_pair[1]),
+            "texto_i": textos[max_pair[0]],
+            "texto_j": textos[max_pair[1]],
+            "distancia": float(dist[max_pair])
         }
     }
 
@@ -223,18 +232,17 @@ def run_pipeline():
 
     elif tipo == "word2vec":
         matrix = gerar_word2vec(textos)
-        insights = gerar_insights_embedding(matrix)
+        insights = gerar_insights_embedding(matrix, textos)
 
     elif tipo == "transformer":
         matrix = gerar_transformer(textos)
-        insights = gerar_insights_embedding(matrix)
+        insights = gerar_insights_embedding(matrix, textos)
 
     else:
         return "Método inválido", 400
 
     outputs = gerar_graficos(matrix, tipo)
 
-    # Clusterização
     clusters = gerar_clusters(matrix, textos, n_clusters=2)
 
     return render_template(
